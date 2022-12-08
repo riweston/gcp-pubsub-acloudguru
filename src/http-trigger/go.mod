@@ -1,4 +1,4 @@
-module hello_world
+module github.com/riweston/gcp-pubsub-acloudguru/src/http-trigger/hello_world
 
 go 1.19
 
