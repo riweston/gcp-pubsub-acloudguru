@@ -42,6 +42,12 @@ resource "google_cloudfunctions2_function" "http_trigger" {
     available_memory   = "256M"
     timeout_seconds    = 60
   }
+
+  lifecycle {
+    replace_triggered_by = [
+      google_storage_bucket_object.http_trigger.md5hash
+    ]
+  }
 }
 
 resource "google_cloud_run_service_iam_binding" "http_trigger" {
