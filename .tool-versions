@@ -1,0 +1,5 @@
+direnv 2.32.1
+golang 1.19.4
+gcloud 411.0.0
+terraform 1.3.6
+terraform-ls 0.30.1
