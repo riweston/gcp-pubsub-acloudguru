@@ -58,3 +58,16 @@ func HashSigBaseString(sigBaseString string) (string, error) {
 	}
 	return fmt.Sprintf("v0=%x", h.Sum(nil)), nil
 }
+
+func VerifySignature(r *http.Request) error {
+	sigBaseString := GenerateSigBaseString(r)
+	slackSignature := r.Header.Get("X-Slack-Signature")
+	hashedSigBaseString, err := HashSigBaseString(sigBaseString)
+	if err != nil {
+		return err
+	}
+	if slackSignature != hashedSigBaseString {
+		return fmt.Errorf("X-Slack-Signature is invalid")
+	}
+	return nil
+}

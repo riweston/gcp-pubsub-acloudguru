@@ -113,7 +113,6 @@ func TestHashSigBaseString(t *testing.T) {
 			name: "Environment variable 'SLACK_SIGNING_SECRET' not set",
 			args: args{
 				sigBaseString: sigBaseString,
-				envVarSet:     false,
 			},
 			want:    "",
 			wantErr: true,
@@ -163,6 +162,76 @@ func TestGenerateSigBaseString(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			if got := GenerateSigBaseString(tt.args.r); got != tt.want {
 				t.Errorf("GenerateSigBaseString() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestVerifySignature(t *testing.T) {
+	type args struct {
+		r              *http.Request
+		envVarSet      bool
+		envVarMisMatch bool
+	}
+	tests := []struct {
+		name    string
+		args    args
+		wantErr bool
+	}{
+		{
+			name: "Provided with a valid request",
+			args: args{
+				r: &http.Request{
+					Header: http.Header{
+						"X-Slack-Request-Timestamp": []string{requestTimestamp},
+						"X-Slack-Signature":         []string{sigBaseStringHashed},
+					},
+					Body: io.NopCloser(bytes.NewBufferString(requestBody)),
+				},
+				envVarSet: true,
+			},
+			wantErr: false,
+		},
+		{
+			name: "Provided without environment variable 'SLACK_SIGNING_SECRET' set",
+			args: args{
+				r: &http.Request{
+					Header: http.Header{
+						"X-Slack-Request-Timestamp": []string{requestTimestamp},
+						"X-Slack-Signature":         []string{sigBaseStringHashed},
+					},
+					Body: io.NopCloser(bytes.NewBufferString(requestBody)),
+				},
+			},
+			wantErr: true,
+		},
+		{
+			name: "Provided with incorrect 'SLACK_SIGNING_SECRET' set",
+			args: args{
+				r: &http.Request{
+					Header: http.Header{
+						"X-Slack-Request-Timestamp": []string{requestTimestamp},
+						"X-Slack-Signature":         []string{sigBaseStringHashed},
+					},
+					Body: io.NopCloser(bytes.NewBufferString(requestBody)),
+				},
+				envVarMisMatch: true,
+			},
+			wantErr: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if tt.args.envVarSet {
+				defer os.Unsetenv("SLACK_SIGNING_SECRET")
+				os.Setenv("SLACK_SIGNING_SECRET", slackSigningSecret)
+			}
+			if tt.args.envVarMisMatch {
+				defer os.Unsetenv("SLACK_SIGNING_SECRET")
+				os.Setenv("SLACK_SIGNING_SECRET", "somethingSilly")
+			}
+			if err := VerifySignature(tt.args.r); (err != nil) != tt.wantErr {
+				t.Errorf("VerifySignature() error = %v, wantErr %v", err, tt.wantErr)
 			}
 		})
 	}
