@@ -10,10 +10,23 @@ func VerifyRequestType(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+func VerifyFormRequiredFields(w http.ResponseWriter, r *http.Request) {
+	requiredFields := []string{
+		"user_id",
+		"response_url",
+	}
+	for _, v := range requiredFields {
+		if r.FormValue(v) == "" {
+			w.WriteHeader(http.StatusBadRequest)
+		}
+	}
+}
+
 func VerifyRequestForm(w http.ResponseWriter, r *http.Request) {
 	err := r.ParseForm()
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
+	VerifyFormRequiredFields(w, r)
 }
