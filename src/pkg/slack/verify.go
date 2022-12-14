@@ -77,7 +77,11 @@ func VerifySignature(r *http.Request) error {
 		return err
 	}
 	if slackSignature != hashedSigBaseString {
+		log.Printf("slackSignature: %s", slackSignature)
+		log.Printf("hashedSigBaseString: %s", hashedSigBaseString)
+		log.Printf("sigBaseString: %s", sigBaseString)
 		log.Println("x-slack-signature is mismatch")
+		log.Println("HEADERS", r.Header)
 		return fmt.Errorf("x-slack-signature is mismatch")
 	}
 	return nil
