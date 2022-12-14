@@ -58,12 +58,13 @@ func HashSigBaseString(sigBaseString string) (string, error) {
 		log.Println("Failed to hash the signature base string")
 		return "", fmt.Errorf("error hashing sigBaseString: %v", err)
 	}
+	
 	return fmt.Sprintf("v0=%x", h.Sum(nil)), nil
 }
 
 func VerifySignature(r *http.Request) error {
 	sigBaseString := GenerateSigBaseString(r)
-	slackSignature := r.Header.Get("X-Slack-Signature")
+	slackSignature := r.Header.Get("x-slack-signature")
 	hashedSigBaseString, err := HashSigBaseString(sigBaseString)
 	if err != nil {
 		log.Println("Unknown Error: Failed to hash the signature base string")
