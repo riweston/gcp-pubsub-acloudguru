@@ -3,7 +3,7 @@ package acg_http
 import "net/http"
 
 func VerifyRequestType(w http.ResponseWriter, r *http.Request) {
-	headerContentType := r.Header.Get("Content-Type")
+	headerContentType := r.Header.Get("content-type")
 	if headerContentType != "application/x-www-form-urlencoded" {
 		w.WriteHeader(http.StatusUnsupportedMediaType)
 		return

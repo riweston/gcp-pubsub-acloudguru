@@ -22,7 +22,7 @@ func (h *HttpRequest) Verify() bool {
 }
 
 func VerifyTimeStamp(r *http.Request) (string, error) {
-	headerTimeStamp := r.Header["x-slack-request-timestamp"][0]
+	headerTimeStamp := r.Header.Get("x-slack-request-timestamp")
 	if len(headerTimeStamp) == 0 {
 		log.Println("x-slack-request-timestamp header is missing")
 		return "", fmt.Errorf("x-slack-request-timestamp header is missing")
@@ -66,7 +66,7 @@ func HashSigBaseString(sigBaseString string) (string, error) {
 
 func VerifySignature(r *http.Request) error {
 	sigBaseString := GenerateSigBaseString(r)
-	slackSignature := r.Header["x-slack-signature"][0]
+	slackSignature := r.Header.Get("x-slack-signature")
 	if len(slackSignature) == 0 {
 		log.Println("x-slack-signature header is missing")
 		return fmt.Errorf("x-slack-signature header is missing")
