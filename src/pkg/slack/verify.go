@@ -49,11 +49,13 @@ func GenerateSigBaseString(r *http.Request) string {
 func HashSigBaseString(sigBaseString string) (string, error) {
 	slackSigningSecret := os.Getenv("SLACK_SIGNING_SECRET")
 	if slackSigningSecret == "" {
+		log.Println("SLACK_SIGNING_SECRET is missing")
 		return "", fmt.Errorf("SLACK_SIGNING_SECRET is not set")
 	}
 	h := hmac.New(sha256.New, []byte(slackSigningSecret))
 	_, err := h.Write([]byte(sigBaseString))
 	if err != nil {
+		log.Println("Failed to hash the signature base string")
 		return "", fmt.Errorf("error hashing sigBaseString: %v", err)
 	}
 	return fmt.Sprintf("v0=%x", h.Sum(nil)), nil
@@ -64,9 +66,11 @@ func VerifySignature(r *http.Request) error {
 	slackSignature := r.Header.Get("X-Slack-Signature")
 	hashedSigBaseString, err := HashSigBaseString(sigBaseString)
 	if err != nil {
+		log.Println("Unknown Error: Failed to hash the signature base string")
 		return err
 	}
 	if slackSignature != hashedSigBaseString {
+		log.Println("X-Slack-Signature is invalid")
 		return fmt.Errorf("X-Slack-Signature is invalid")
 	}
 	return nil
