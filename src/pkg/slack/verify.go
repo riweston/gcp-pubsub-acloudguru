@@ -41,7 +41,7 @@ func VerifyTimeStamp(r *http.Request) bool {
 }
 
 func GenerateSigBaseString(r *http.Request) string {
-	headerTimeStamp := r.Header.Get("X-Slack-Request-Timestamp")
+	headerTimeStamp := r.Header.Get("x-slack-request-timestamp")
 	requestBody, _ := io.ReadAll(r.Body)
 	return fmt.Sprint("v0:" + headerTimeStamp + ":" + string(requestBody))
 }
