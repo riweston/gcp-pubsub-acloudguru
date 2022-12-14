@@ -21,27 +21,30 @@ func (h *HttpRequest) Verify() bool {
 	return false
 }
 
-func VerifyTimeStamp(r *http.Request) bool {
-	headerTimeStamp := r.Header.Get("x-slack-request-timestamp")
-	if headerTimeStamp == "" {
+func VerifyTimeStamp(r *http.Request) (string, error) {
+	headerTimeStamp := r.Header["x-slack-request-timestamp"][0]
+	if len(headerTimeStamp) == 0 {
 		log.Println("x-slack-request-timestamp header is missing")
-		return false
+		return "", fmt.Errorf("x-slack-request-timestamp header is missing")
 	}
 	headerTimeStampInt, err := strconv.ParseInt(headerTimeStamp, 10, 64)
 	if err != nil {
 		log.Println("x-slack-request-timestamp header value is invalid")
-		return false
+		return "", fmt.Errorf("x-slack-request-timestamp header value is invalid")
 	}
 	currentTime := time.Now().Unix()
 	if (currentTime - headerTimeStampInt) > (60 * 5) {
 		log.Println("x-slack-request-timestamp is too old")
-		return false
+		return "", fmt.Errorf("x-slack-request-timestamp is too old")
 	}
-	return true
+	return headerTimeStamp, nil
 }
 
 func GenerateSigBaseString(r *http.Request) string {
-	headerTimeStamp := r.Header.Get("x-slack-request-timestamp")
+	headerTimeStamp, err := VerifyTimeStamp(r)
+	if err != nil {
+		err.Error()
+	}
 	requestBody, _ := io.ReadAll(r.Body)
 	return fmt.Sprint("v0:" + headerTimeStamp + ":" + string(requestBody))
 }
@@ -63,8 +66,8 @@ func HashSigBaseString(sigBaseString string) (string, error) {
 
 func VerifySignature(r *http.Request) error {
 	sigBaseString := GenerateSigBaseString(r)
-	slackSignature := r.Header.Get("x-slack-signature")
-	if slackSignature == "" {
+	slackSignature := r.Header["x-slack-signature"][0]
+	if len(slackSignature) == 0 {
 		log.Println("x-slack-signature header is missing")
 		return fmt.Errorf("x-slack-signature header is missing")
 	}
