@@ -4,6 +4,7 @@ locals {
     "run.googleapis.com",
     "artifactregistry.googleapis.com",
     "cloudbuild.googleapis.com",
+    "logging.googleapis.com",
   ]
 }
 

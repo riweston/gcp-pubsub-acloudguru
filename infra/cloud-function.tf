@@ -1,5 +1,5 @@
 locals {
-  function_name_http_trigger = "http-trigger"
+  function_name_http_trigger = "http_router"
   location                   = "europe-west2"
 }
 
@@ -12,7 +12,7 @@ resource "google_storage_bucket" "this" {
 
 data "archive_file" "http_trigger" {
   type        = "zip"
-  source_dir  = "${path.module}/../src/${local.function_name_http_trigger}"
+  source_dir  = "${path.module}/../src/build/${local.function_name_http_trigger}"
   output_path = "/tmp/${local.function_name_http_trigger}.zip"
 }
 
@@ -23,13 +23,13 @@ resource "google_storage_bucket_object" "http_trigger" {
 }
 
 resource "google_cloudfunctions2_function" "http_trigger" {
-  name        = "http-trigger"
+  name        = replace(local.function_name_http_trigger, "_", "-")
   location    = local.location
   description = "http trigger function"
 
   build_config {
     runtime     = "go119"
-    entry_point = "HelloWorld" # Set the entry point
+    entry_point = "Router" # Set the entry point
     source {
       storage_source {
         bucket = google_storage_bucket.this.name
@@ -38,9 +38,15 @@ resource "google_cloudfunctions2_function" "http_trigger" {
     }
   }
   service_config {
-    max_instance_count = 1
-    available_memory   = "256M"
-    timeout_seconds    = 60
+    max_instance_count    = 1
+    available_memory      = "256M"
+    timeout_seconds       = 60
+    environment_variables = {
+      PROJECT_ID           = data.google_project.this.number
+      TOPIC_NAME           = google_pubsub_topic.this.name
+      SLACK_SIGNING_SECRET = "a7c64cd4d17448bc3964c1473e03bb6a"
+    }
+    service_account_email = google_service_account.http_trigger.email
   }
 
   lifecycle {
@@ -50,6 +56,10 @@ resource "google_cloudfunctions2_function" "http_trigger" {
   }
 }
 
+resource "google_service_account" "http_trigger" {
+  account_id = replace(local.function_name_http_trigger, "_", "-")
+}
+
 resource "google_cloud_run_service_iam_binding" "http_trigger" {
   location = google_cloudfunctions2_function.http_trigger.location
   service  = google_cloudfunctions2_function.http_trigger.name
@@ -57,6 +67,15 @@ resource "google_cloud_run_service_iam_binding" "http_trigger" {
   members  = [
     "allUsers"
   ]
+}
+
+resource "google_cloudfunctions2_function_iam_member" "member" {
+  project        = google_cloudfunctions2_function.http_trigger.project
+  location       = google_cloudfunctions2_function.http_trigger.location
+  cloud_function = google_cloudfunctions2_function.http_trigger.name
+
+  role   = "roles/cloudfunctions.invoker"
+  member = "allUsers"
 }
 
 output "function_uri" {

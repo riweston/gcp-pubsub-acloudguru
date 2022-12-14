@@ -32,3 +32,10 @@ resource "google_pubsub_subscription" "this" {
   topic                = google_pubsub_topic.this.name
   ack_deadline_seconds = 600
 }
+
+resource "google_pubsub_topic_iam_member" "member" {
+  project = data.google_project.this.project_id
+  topic   = google_pubsub_topic.this.name
+  role    = "roles/pubsub.editor"
+  member  = "serviceAccount:${google_service_account.http_trigger.email}"
+}
