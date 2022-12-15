@@ -83,6 +83,9 @@ func VerifySignature(r *http.Request) error {
 		log.Println("X-Slack-Signature is mismatch")
 		log.Println("HEADERS", r.Header)
 		log.Println("BODY", r.Body)
+		log.Println("FORM", r.Form)
+		r.ParseForm()
+		log.Println("PARSED FORM", r.Form)
 		return fmt.Errorf("X-Slack-Signature is mismatch")
 	}
 	return nil
