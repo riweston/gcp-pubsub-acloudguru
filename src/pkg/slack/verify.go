@@ -46,7 +46,7 @@ func GenerateSigBaseString(r *http.Request) string {
 		err.Error()
 	}
 	requestBody, _ := io.ReadAll(r.Body)
-	return fmt.Sprint("v0:" + headerTimeStamp + ":" + string(requestBody))
+	return fmt.Sprintf("v0:%s:%s", headerTimeStamp, string(requestBody))
 }
 
 func HashSigBaseString(sigBaseString string) (string, error) {
