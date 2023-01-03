@@ -20,6 +20,7 @@ dependency "pubsub" {
 
 inputs = {
   source_dir    = "${find_in_parent_folders("src")}/build/${local.function_name}"
+  entry_point   = "Router"
   function_name = local.function_name
   bucket_name   = dependency.core.outputs.bucket_name_cloud_function
   location      = dependency.core.outputs.location
