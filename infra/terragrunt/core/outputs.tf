@@ -13,3 +13,7 @@ output "project_id" {
 output "secret_id_slack_signing_secret" {
   value = data.google_secret_manager_secret.slack_signing_secret.secret_id
 }
+
+output "secret_id_slack_bot_token" {
+  value = data.google_secret_manager_secret.slack_bot_token.secret_id
+}
