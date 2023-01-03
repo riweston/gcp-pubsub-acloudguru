@@ -1,5 +1,7 @@
 variable "source_dir" {}
 
+variable "entry_point" {}
+
 variable "function_name" {
   default = ""
 }

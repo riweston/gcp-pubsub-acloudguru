@@ -17,7 +17,7 @@ resource "google_cloudfunctions2_function" "this" {
 
   build_config {
     runtime     = "go119"
-    entry_point = "Router"
+    entry_point = var.entry_point
     source {
       storage_source {
         bucket = var.bucket_name
