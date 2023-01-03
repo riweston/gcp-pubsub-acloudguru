@@ -3,7 +3,7 @@ include {
 }
 
 locals {
-  function_name = "http_router"
+  function_name = basename(dirname(get_terragrunt_dir()))
 }
 
 terraform {
