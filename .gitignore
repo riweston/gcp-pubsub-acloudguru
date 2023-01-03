@@ -183,4 +183,15 @@ terraform.rc
 .history
 .ionide
 
+### Terragrunt ###
+# terragrunt cache directories
+**/.terragrunt-cache/*
+
+# Terragrunt debug output file (when using `--terragrunt-debug` option)
+# See: https://terragrunt.gruntwork.io/docs/reference/cli-options/#terragrunt-debug
+terragrunt-debug.tfvars.json
+
+# Terragrunt Generated files
+**/*_generated.tf
+
 # End of https://www.toptal.com/developers/gitignore/api/goland+all,go,visualstudiocode,terraform

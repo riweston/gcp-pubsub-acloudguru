@@ -1,4 +1,9 @@
+include {
+  path = find_in_parent_folders()
+}
+
 locals {
+  location = "europe-west2"
   apis = [
     "cloudfunctions.googleapis.com",
     "run.googleapis.com",
@@ -9,9 +14,7 @@ locals {
   ]
 }
 
-resource "google_project_service" "this" {
-  for_each = toset(local.apis)
-
-  service                    = each.value
-  disable_dependent_services = true
+inputs = {
+  location = local.location
+  apis     = local.apis
 }
