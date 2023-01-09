@@ -54,6 +54,10 @@ func init() {
 
 func houseKeeping(ctx context.Context, e event.Event) error {
 	var msg MessagePublishedData
+	if err := e.DataAs(&msg); err != nil {
+		return fmt.Errorf("event.DataAs: %v", err)
+	}
+
 	client, err := acg.NewClient(&apiKey, &consumerId)
 	if err != nil {
 		fmt.Errorf("error creating client: %v", err)
