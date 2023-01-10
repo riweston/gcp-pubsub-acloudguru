@@ -17,3 +17,11 @@ output "secret_id_slack_signing_secret" {
 output "secret_id_slack_bot_token" {
   value = data.google_secret_manager_secret.slack_bot_token.secret_id
 }
+
+output "secret_id_acloudguru_api_key" {
+  value = data.google_secret_manager_secret.acloudguru_api_key.secret_id
+}
+
+output "secret_id_acloudguru_consumer_id" {
+  value = data.google_secret_manager_secret.acloudguru_consumer_id.secret_id
+}
