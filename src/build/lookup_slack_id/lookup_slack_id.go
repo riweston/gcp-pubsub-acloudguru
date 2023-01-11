@@ -11,6 +11,18 @@ import (
 	"os"
 )
 
+var slackBotToken string
+
+// init functions fail fast if the environment variables are not set
+
+func init() {
+	slackBotToken = os.Getenv("SLACK_BOT_TOKEN")
+	if slackBotToken == "" {
+		fmt.Println("SLACK_BOT_TOKEN not set")
+		os.Exit(1)
+	}
+}
+
 // Message structs
 type Request struct {
 	userId       string
@@ -53,8 +65,8 @@ func lookupSlackId(ctx context.Context, e event.Event) error {
 }
 
 func (r *Request) lookupEmail() error {
-	client := slack.New(os.Getenv("SLACK_BOT_TOKEN"))
 	user, err := client.GetUserInfo(r.userId)
+	client := slack.New(slackBotToken)
 	if err != nil {
 		log.Printf("Error getting user info: %s", err)
 	}
