@@ -11,8 +11,8 @@ import (
 
 // Message structs
 type Request struct {
-	requestType  string
-	emailAddress string
+	requestType string
+	userId      string
 }
 
 type MessagePublishedData struct {
@@ -35,14 +35,14 @@ func activateDeactivate(ctx context.Context, e event.Event) error {
 	}
 
 	request := Request{
-		requestType:  msg.Message.Attributes["request_type"],
-		emailAddress: msg.Message.Attributes["user_email"],
+		requestType: msg.Message.Attributes["request_type"],
+		userId:      msg.Message.Attributes["user_id"],
 	}
 
 	responseUrl := msg.Message.Attributes["response_url"]
 	client := slack.New(os.Getenv("SLACK_BOT_TOKEN"))
 	slack.MsgOptionReplaceOriginal(responseUrl)
-	slackMsg := fmt.Sprintln("User", request.emailAddress, "has been", request.requestType, "by", "admin")
+	slackMsg := fmt.Sprintln("User", request.userId, "has been", request.requestType, "by", "admin")
 	client.PostMessage("", slack.MsgOptionReplaceOriginal(responseUrl), slack.MsgOptionText(slackMsg, false))
 
 	return nil
