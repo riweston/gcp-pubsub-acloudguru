@@ -9,7 +9,7 @@ import (
 	"os"
 )
 
-func Router(w http.ResponseWriter, r *http.Request) {
+func EntryPoint(w http.ResponseWriter, r *http.Request) {
 	verifier, err := slack.NewSecretsVerifier(r.Header, os.Getenv("SLACK_SIGNING_SECRET"))
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)

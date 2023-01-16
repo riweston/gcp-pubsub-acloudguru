@@ -199,8 +199,8 @@ github.com/pkg/errors v0.9.1/go.mod h1:bwawxfHBFNV+L2hUp1rHADufV3IMtnDRdf1r5NINE
 github.com/pmezard/go-difflib v1.0.0 h1:4DBwDE0NGyQoBHbLQYPwSUPoCMWR5BEzIk/f1lZbAQM=
 github.com/pmezard/go-difflib v1.0.0/go.mod h1:iKH77koFhYxTK1pcRnkKkqfTogsbg7gZNVY4sRDYZ/4=
 github.com/prometheus/client_model v0.0.0-20190812154241-14fe0d1b01d4/go.mod h1:xMI15A0UPsDsEKsMN9yxemIoYk6Tm2C1GtYGdfGttqA=
-github.com/riweston/acloudguru-client-go v0.0.0-20230103225246-8d612d61400e h1:vDiz99doFQJ01YxTraf2qUEa2i10czVPygxB4jcuWI0=
-github.com/riweston/acloudguru-client-go v0.0.0-20230103225246-8d612d61400e/go.mod h1:huq13TE4N5Tf3Z59s/5LkOzaiFtIHPH825dd85nHz+M=
+github.com/riweston/acloudguru-client-go v0.0.0-20230112201500-eef2d3771494 h1:c+hcP7QTuhZ44SdCKpB56WkDN45vmlSlzUa1zUo0+9g=
+github.com/riweston/acloudguru-client-go v0.0.0-20230112201500-eef2d3771494/go.mod h1:huq13TE4N5Tf3Z59s/5LkOzaiFtIHPH825dd85nHz+M=
 github.com/rogpeppe/fastuuid v1.2.0/go.mod h1:jVj6XXZzXRy/MSR5jhDC/2q6DgLz+nrA6LYCDYWNEvQ=
 github.com/rogpeppe/go-internal v1.3.0/go.mod h1:M8bDsm7K2OlrFYOpmOWEs/qY81heoFRclV5y23lUDJ4=
 github.com/slack-go/slack v0.12.1 h1:X97b9g2hnITDtNsNe5GkGx6O2/Sz/uC20ejRZN6QxOw=

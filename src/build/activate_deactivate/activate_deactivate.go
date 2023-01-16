@@ -25,10 +25,10 @@ type PubSubMessage struct {
 }
 
 func init() {
-	functions.CloudEvent("ActivateDeactivate", activateDeactivate)
+	functions.CloudEvent("EntryPoint", entryPoint)
 }
 
-func activateDeactivate(ctx context.Context, e event.Event) error {
+func entryPoint(ctx context.Context, e event.Event) error {
 	var msg MessagePublishedData
 	if err := e.DataAs(&msg); err != nil {
 		return fmt.Errorf("event.DataAs: %v", err)

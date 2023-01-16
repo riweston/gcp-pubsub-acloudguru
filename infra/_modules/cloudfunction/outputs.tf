@@ -1,11 +1,7 @@
-output "function_name" {
-  value = google_cloudfunctions2_function.this.name
+output "pubsub_topic" {
+  value = try(google_pubsub_topic.this[0].name, "")
 }
 
 output "service_account_email" {
-  value = google_cloudfunctions2_function.this.service_config[0].service_account_email
-}
-
-output "endpoint" {
-  value = google_cloudfunctions2_function.this.service_config[0].uri
+  value = google_service_account.this.email
 }

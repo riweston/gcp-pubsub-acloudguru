@@ -54,16 +54,17 @@ type PubSubMessage struct {
 }
 
 func init() {
-	functions.CloudEvent("LookupSlackId", lookupSlackId)
+	functions.CloudEvent("EntryPoint", entryPoint)
 }
 
-func lookupSlackId(ctx context.Context, e event.Event) error {
+func entryPoint(ctx context.Context, e event.Event) error {
 	var msg MessagePublishedData
 	if err := e.DataAs(&msg); err != nil {
 		return fmt.Errorf("event.DataAs: %v", err)
 	}
 
 	// Get the user's email address from Slack
+	fmt.Println("Looking up email address for user", msg.Message.Attributes["user_id"])
 	slackId, err := lookupEmail(msg.Message.Attributes["user_id"])
 	if err != nil {
 		return fmt.Errorf("(Slack Client) Error looking up email: %s", err)
@@ -71,18 +72,20 @@ func lookupSlackId(ctx context.Context, e event.Event) error {
 	if slackId == "" {
 		return fmt.Errorf("(Slack Client) userId is blank")
 	}
+	fmt.Println("Email address for user", msg.Message.Attributes["user_id"], "is", slackId)
 
 	// Request the user's ACG ID from ACG using email address
-	client, err := acg.NewClient(&apiKey, &consumerId)
+	clientAcg, err := acg.NewClient(&apiKey, &consumerId)
 	if err != nil {
 		return fmt.Errorf("(ACG Client) Error creating client: %s", err)
 	}
-	acgId, err := client.GetUserFromEmail(msg.Message.Attributes["emailAddress"])
+	acgId, err := clientAcg.GetUserFromEmail(slackId)
 	if err != nil {
 		return fmt.Errorf("(ACG Client) Error getting user: %s", err)
 	}
+	println("ACG ID for user", slackId, "is", acgId)
 	pubSubMsg := PubSubMsg{
-		userId:      acgId.UserId,
+		userId:      (*acgId)[0].UserId,
 		responseUrl: msg.Message.Attributes["response_url"],
 		requestType: "activate",
 	}

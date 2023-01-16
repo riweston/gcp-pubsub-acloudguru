@@ -49,10 +49,10 @@ func init() {
 }
 
 func init() {
-	functions.CloudEvent("HouseKeeping", houseKeeping)
+	functions.CloudEvent("EntryPoint", entryPoint)
 }
 
-func houseKeeping(ctx context.Context, e event.Event) error {
+func entryPoint(ctx context.Context, e event.Event) error {
 	var msg MessagePublishedData
 	if err := e.DataAs(&msg); err != nil {
 		return fmt.Errorf("event.DataAs: %v", err)
