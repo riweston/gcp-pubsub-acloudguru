@@ -6,6 +6,7 @@ require (
 	cloud.google.com/go/pubsub v1.3.1
 	github.com/GoogleCloudPlatform/functions-framework-go v1.6.1
 	github.com/cloudevents/sdk-go/v2 v2.12.0
+	github.com/riweston/acloudguru-client-go v0.0.0-20230103225246-8d612d61400e
 	github.com/slack-go/slack v0.12.1
 )
 

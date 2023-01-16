@@ -72,18 +72,18 @@ func houseKeeping(ctx context.Context, e event.Event) error {
 	if len(usersDeactivate) > 0 {
 		for _, user := range usersDeactivate {
 			fmt.Println(user.Status, user.LastSeenTimestamp, user.Name)
-			request := Request{
-				emailAddress: user.Email,
-				responseUrl:  msg.Message.Attributes["response_url"],
-				requestType:  "deactivate",
+			pubSubMsg := PubSubMsg{
+				userId:      user.UserId,
+				responseUrl: msg.Message.Attributes["response_url"],
+				requestType: "deactivate",
 			}
-			request.PublishMessage()
+			pubSubMsg.PublishMessage()
 		}
 	}
 	return nil
 }
 
-func (r *Request) PublishMessage() {
+func (r *PubSubMsg) PublishMessage() {
 	ctx := context.Background()
 	client, err := pubsub.NewClient(ctx, os.Getenv("PROJECT_ID"))
 	if err != nil {
@@ -93,7 +93,7 @@ func (r *Request) PublishMessage() {
 	defer topic.Stop()
 	topic.Publish(ctx, &pubsub.Message{
 		Attributes: map[string]string{
-			"user_email":   r.emailAddress,
+			"user_id":      r.userId,
 			"response_url": r.responseUrl,
 			"request_type": r.requestType,
 		},
@@ -112,10 +112,10 @@ func NewUsers(AllUsers *[]acg.User) *Users {
 
 // models
 
-type Request struct {
-	requestType  string
-	responseUrl  string
-	emailAddress string
+type PubSubMsg struct {
+	userId      string
+	responseUrl string
+	requestType string
 }
 
 type MessagePublishedData struct {

@@ -6,16 +6,42 @@ import (
 	"fmt"
 	"github.com/GoogleCloudPlatform/functions-framework-go/functions"
 	"github.com/cloudevents/sdk-go/v2/event"
+	acg "github.com/riweston/acloudguru-client-go"
 	"github.com/slack-go/slack"
 	"log"
 	"os"
 )
 
+var apiKey string
+var consumerId string
+var slackBotToken string
+
+// init functions fail fast if the environment variables are not set
+
+func init() {
+	apiKey = os.Getenv("ACLOUDGURU_API_KEY")
+	if apiKey == "" {
+		fmt.Println("ACLOUDGURU_API_KEY not set")
+		os.Exit(1)
+	}
+	consumerId = os.Getenv("ACLOUDGURU_CONSUMER_ID")
+	if consumerId == "" {
+		fmt.Println("ACLOUDGURU_CONSUMER_ID not set")
+		os.Exit(1)
+	}
+	slackBotToken = os.Getenv("SLACK_BOT_TOKEN")
+	if slackBotToken == "" {
+		fmt.Println("SLACK_BOT_TOKEN not set")
+		os.Exit(1)
+	}
+}
+
 // Message structs
-type Request struct {
-	userId       string
-	responseUrl  string
-	emailAddress string
+
+type PubSubMsg struct {
+	userId      string
+	responseUrl string
+	requestType string
 }
 
 type MessagePublishedData struct {
@@ -37,32 +63,45 @@ func lookupSlackId(ctx context.Context, e event.Event) error {
 		return fmt.Errorf("event.DataAs: %v", err)
 	}
 
-	response := Request{
-		userId:      msg.Message.Attributes["user_id"],
+	// Get the user's email address from Slack
+	slackId, err := lookupEmail(msg.Message.Attributes["user_id"])
+	if err != nil {
+		return fmt.Errorf("(Slack Client) Error looking up email: %s", err)
+	}
+	if slackId == "" {
+		return fmt.Errorf("(Slack Client) userId is blank")
+	}
+
+	// Request the user's ACG ID from ACG using email address
+	client, err := acg.NewClient(&apiKey, &consumerId)
+	if err != nil {
+		return fmt.Errorf("(ACG Client) Error creating client: %s", err)
+	}
+	acgId, err := client.GetUserFromEmail(msg.Message.Attributes["emailAddress"])
+	if err != nil {
+		return fmt.Errorf("(ACG Client) Error getting user: %s", err)
+	}
+	pubSubMsg := PubSubMsg{
+		userId:      acgId.UserId,
 		responseUrl: msg.Message.Attributes["response_url"],
+		requestType: "activate",
 	}
-	if response.userId == "" {
-		log.Printf("userId is blank!")
-	}
-	if err := response.lookupEmail(); err != nil {
-		log.Printf("Error looking up email: %s", err)
-	}
-	log.Printf("Email is %s!", response.emailAddress)
-	response.PublishMessage()
+	pubSubMsg.PublishMessage()
+
 	return nil
 }
 
-func (r *Request) lookupEmail() error {
-	client := slack.New(os.Getenv("SLACK_BOT_TOKEN"))
-	user, err := client.GetUserInfo(r.userId)
+func lookupEmail(userId string) (string, error) {
+	client := slack.New(slackBotToken)
+	user, err := client.GetUserInfo(userId)
 	if err != nil {
 		log.Printf("Error getting user info: %s", err)
+		return "", err
 	}
-	r.emailAddress = user.Profile.Email
-	return nil
+	return user.Profile.Email, nil
 }
 
-func (r *Request) PublishMessage() {
+func (p *PubSubMsg) PublishMessage() {
 	ctx := context.Background()
 	client, err := pubsub.NewClient(ctx, os.Getenv("PROJECT_ID"))
 	if err != nil {
@@ -72,9 +111,9 @@ func (r *Request) PublishMessage() {
 	defer topic.Stop()
 	topic.Publish(ctx, &pubsub.Message{
 		Attributes: map[string]string{
-			"user_email":   r.emailAddress,
-			"response_url": r.responseUrl,
-			"request_type": "activate",
+			"user_id":      p.userId,
+			"response_url": p.responseUrl,
+			"request_type": p.requestType,
 		},
 	})
 }

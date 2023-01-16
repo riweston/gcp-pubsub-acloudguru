@@ -34,5 +34,13 @@ inputs = {
       key          = "SLACK_BOT_TOKEN"
       secret_value = dependency.core.outputs.secret_id_slack_bot_token
     },
+    {
+      key          = "ACLOUDGURU_API_KEY"
+      secret_value = dependency.core.outputs.secret_id_acloudguru_api_key
+    },
+    {
+      key          = "ACLOUDGURU_CONSUMER_ID"
+      secret_value = dependency.core.outputs.secret_id_acloudguru_consumer_id
+    },
   ]
 }
