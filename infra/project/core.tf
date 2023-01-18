@@ -5,7 +5,7 @@ provider "google" {
 terraform {
   backend "gcs" {
     bucket = "529307337096"
-    prefix = "terraform/state"
+    prefix = "terraform/state/project"
   }
   required_version = ">= 1.3.6"
   required_providers {
