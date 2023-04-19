@@ -1,51 +1,30 @@
 package house_keeping
 
 import (
-	"cloud.google.com/go/pubsub"
 	"context"
 	"fmt"
 	"github.com/GoogleCloudPlatform/functions-framework-go/functions"
+	"github.com/alexflint/go-arg"
 	"github.com/cloudevents/sdk-go/v2/event"
+	"github.com/cloudreach/gcp-pubsub-acloudguru/src/pkg/util"
 	"github.com/riweston/acloudguru-client-go"
-	"log"
-	"os"
-	"sort"
-	"strconv"
-	"time"
 )
 
-var apiKey string
-var consumerId string
-var daysCap int
-var licenseCap int
+// Required environment variables
 
-// init functions fail fast if the environment variables are not set
-
-func init() {
-	apiKey = os.Getenv("ACLOUDGURU_API_KEY")
-	if apiKey == "" {
-		fmt.Println("API_KEY not set")
-		os.Exit(1)
-	}
-	consumerId = os.Getenv("ACLOUDGURU_CONSUMER_ID")
-	if consumerId == "" {
-		fmt.Println("CONSUMER_ID not set")
-		os.Exit(1)
-	}
+type args struct {
+	ProjectID  string `arg:"required,env:PROJECT_ID"`
+	TopicName  string `arg:"required,env:TOPIC_NAME"`
+	ApiKey     string `arg:"required,env:ACLOUDGURU_API_KEY"`
+	ConsumerId string `arg:"required,env:ACLOUDGURU_CONSUMER_ID"`
+	DaysCap    int    `arg:"required,env:DAYS_CAP"`
+	LicenseCap int    `arg:"required,env:LICENSE_CAP"`
 }
 
+var serviceConfig args
+
 func init() {
-	var err error
-	daysCap, err = GetDaysCap()
-	if err != nil {
-		fmt.Println("DAYS_CAP not set")
-		os.Exit(1)
-	}
-	licenseCap, err = GetLicenseCap()
-	if err != nil {
-		fmt.Println("LICENSE_CAP not set")
-		os.Exit(1)
-	}
+	arg.MustParse(&serviceConfig)
 }
 
 func init() {
@@ -53,12 +32,12 @@ func init() {
 }
 
 func entryPoint(ctx context.Context, e event.Event) error {
-	var msg MessagePublishedData
+	var msg util.MessagePublishedData
 	if err := e.DataAs(&msg); err != nil {
 		return fmt.Errorf("event.DataAs: %v", err)
 	}
 
-	client, err := acg.NewClient(&apiKey, &consumerId)
+	client, err := acg.NewClient(&serviceConfig.ApiKey, &serviceConfig.ConsumerId)
 	if err != nil {
 		fmt.Errorf("error creating client: %v", err)
 	}
@@ -66,150 +45,22 @@ func entryPoint(ctx context.Context, e event.Event) error {
 	if err != nil {
 		fmt.Errorf("error getting users: %v", err)
 	}
-	usersProcessed := NewUsers(usersAll)
+	usersProcessed := util.NewUsers(usersAll, serviceConfig.DaysCap, serviceConfig.LicenseCap)
 	usersDeactivate := usersProcessed.GetUsersToDeactivate()
 
 	if len(usersDeactivate) > 0 {
+		clientPubSub, err := util.NewClientPubSub(ctx, serviceConfig.ProjectID, serviceConfig.TopicName)
+		if err != nil {
+			fmt.Errorf("error creating client: %v", err)
+		}
+		defer clientPubSub.Close()
 		for _, user := range usersDeactivate {
+			// TODO: Debug statement this should be replaced with proper logging
 			fmt.Println(user.Status, user.LastSeenTimestamp, user.Name)
-			pubSubMsg := PubSubMsg{
-				userId:      user.UserId,
-				responseUrl: msg.Message.Attributes["response_url"],
-				requestType: "deactivate",
-			}
-			pubSubMsg.PublishMessage()
+			pubSubMsg := util.NewDeactivate(user, msg)
+			fmt.Println(pubSubMsg.UserId, pubSubMsg.RequestType, pubSubMsg.ResponseUrl)
+			clientPubSub.PublishMessage(ctx, pubSubMsg.NewMessage())
 		}
 	}
 	return nil
-}
-
-func (r *PubSubMsg) PublishMessage() {
-	ctx := context.Background()
-	client, err := pubsub.NewClient(ctx, os.Getenv("PROJECT_ID"))
-	if err != nil {
-		log.Fatal(err)
-	}
-	topic := client.Topic(os.Getenv("TOPIC_NAME"))
-	defer topic.Stop()
-	topic.Publish(ctx, &pubsub.Message{
-		Attributes: map[string]string{
-			"user_id":      r.userId,
-			"response_url": r.responseUrl,
-			"request_type": r.requestType,
-		},
-	})
-}
-
-func NewUsers(AllUsers *[]acg.User) *Users {
-	users := new(Users)
-	users.AllUsers = AllUsers
-	users.LicenseCap = licenseCap
-	users.DaysCap = daysCap
-	users.FilterActiveUsers()
-	users.FilterOldUsers()
-	return users
-}
-
-// models
-
-type PubSubMsg struct {
-	userId      string
-	responseUrl string
-	requestType string
-}
-
-type MessagePublishedData struct {
-	Message PubSubMessage
-}
-
-type PubSubMessage struct {
-	Data       []byte            `json:"data"`
-	Attributes map[string]string `json:"attributes"`
-}
-
-type Users struct {
-	LicenseCap  int
-	DaysCap     int
-	AllUsers    *[]acg.User
-	ActiveUsers []acg.User
-	OldUsers    []acg.User
-}
-
-func (r *Users) RemoveUsersFromSlice(users *[]acg.User, usersToRemove *[]acg.User) []acg.User {
-	for _, user := range *usersToRemove {
-		for i, user2 := range *users {
-			if user.UserId == user2.UserId {
-				*users = append((*users)[:i], (*users)[i+1:]...)
-				break
-			}
-		}
-	}
-	return *users
-}
-
-func (r *Users) GetUsersToDeactivate() (result []acg.User) {
-	ActiveUsers := r.ActiveUsers
-	// If there are users older than the days cap add them to be processed and remove them from our working slice
-	if len(r.OldUsers) > 0 {
-		result = append(result, r.OldUsers...)
-		ActiveUsers = r.RemoveUsersFromSlice(&r.ActiveUsers, &r.OldUsers)
-	}
-	// If there are still more users than the license cap add the remaining oldest users to be processed
-	CheckCap := len(ActiveUsers) - len(result)
-	if CheckCap > r.LicenseCap {
-		for i := 0; i <= CheckCap-r.LicenseCap; i++ {
-			element := (len(ActiveUsers) - 1) - i
-			result = append(result, (ActiveUsers)[element])
-		}
-	}
-	return
-}
-
-func GetLicenseCap() (int, error) {
-	daysCapStr := os.Getenv("LICENSE_CAP")
-	envVar, err := strconv.Atoi(daysCapStr)
-	if err != nil {
-		return envVar, err
-	}
-	return envVar, nil
-}
-
-func GetDaysCap() (int, error) {
-	daysCapStr := os.Getenv("DAYS_CAP")
-	envVar, err := strconv.Atoi(daysCapStr)
-	if err != nil {
-		return envVar, err
-	}
-	return envVar, nil
-}
-
-func (r *Users) FilterActiveUsers() {
-	r.ActiveUsers = filterSlice(r.AllUsers, filterActiveUsers)
-	sort.Slice(r.ActiveUsers, func(i, j int) bool {
-		return (r.ActiveUsers)[i].LastSeenTimestamp.After((r.ActiveUsers)[j].LastSeenTimestamp)
-	})
-}
-
-func (r *Users) FilterOldUsers() {
-	r.OldUsers = filterSlice(&r.ActiveUsers, r.filterOldUsers)
-}
-
-// Helper function to filter a slice
-
-func filterSlice(s *[]acg.User, t func(acg.User) bool) (ret []acg.User) {
-	for _, v := range *s {
-		if t(v) {
-			ret = append(ret, v)
-		}
-	}
-	return
-}
-
-func filterActiveUsers(user acg.User) bool {
-	return user.Status == "Active"
-}
-
-func (r *Users) filterOldUsers(user acg.User) bool {
-	return user.LastSeenTimestamp.Before(
-		time.Now().AddDate(0, 0, -r.DaysCap))
 }

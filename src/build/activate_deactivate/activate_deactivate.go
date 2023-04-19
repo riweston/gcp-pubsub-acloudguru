@@ -4,24 +4,25 @@ import (
 	"context"
 	"fmt"
 	"github.com/GoogleCloudPlatform/functions-framework-go/functions"
+	"github.com/alexflint/go-arg"
 	"github.com/cloudevents/sdk-go/v2/event"
+	"github.com/cloudreach/gcp-pubsub-acloudguru/src/pkg/util"
+	acg "github.com/riweston/acloudguru-client-go"
 	"github.com/slack-go/slack"
-	"os"
 )
 
-// Message structs
-type Request struct {
-	requestType string
-	userId      string
+// Required environment variables
+
+type args struct {
+	ApiKey        string `arg:"required,env:ACLOUDGURU_API_KEY"`
+	ConsumerId    string `arg:"required,env:ACLOUDGURU_CONSUMER_ID"`
+	SlackBotToken string `arg:"required,env:SLACK_BOT_TOKEN"`
 }
 
-type MessagePublishedData struct {
-	Message PubSubMessage
-}
+var serviceConfig args
 
-type PubSubMessage struct {
-	Data       []byte            `json:"data"`
-	Attributes map[string]string `json:"attributes"`
+func init() {
+	arg.MustParse(&serviceConfig)
 }
 
 func init() {
@@ -29,21 +30,31 @@ func init() {
 }
 
 func entryPoint(ctx context.Context, e event.Event) error {
-	var msg MessagePublishedData
+	var msg util.MessagePublishedData
 	if err := e.DataAs(&msg); err != nil {
 		return fmt.Errorf("event.DataAs: %v", err)
 	}
 
-	request := Request{
-		requestType: msg.Message.Attributes["request_type"],
-		userId:      msg.Message.Attributes["user_id"],
+	// Unmarshal the message
+	request := util.UnmarshalActivate(msg)
+
+	/*	clientAcg, err := acg.NewClient(&serviceConfig.ApiKey, &serviceConfig.ConsumerId)
+		if err != nil {
+			return fmt.Errorf("(ACG Client) Error creating client: %s", err)
+		}*/
+	userAcg := acg.User{UserId: request.UserId}
+	var slackMsg string
+	if request.RequestType == "activate" {
+		//clientAcg.SetUserActivated(&(userAcg), true)
+		slackMsg = fmt.Sprintln("User", userAcg.UserId, "has been activated by admin")
+
+	} else if request.RequestType == "deactivate" {
+		//clientAcg.SetUserActivated(&(userAcg), false)
+		slackMsg = fmt.Sprintln("User", userAcg.UserId, "has been deactivated by admin")
 	}
 
-	responseUrl := msg.Message.Attributes["response_url"]
-	client := slack.New(os.Getenv("SLACK_BOT_TOKEN"))
-	slack.MsgOptionReplaceOriginal(responseUrl)
-	slackMsg := fmt.Sprintln("User", request.userId, "has been", request.requestType, "by", "admin")
-	client.PostMessage("", slack.MsgOptionReplaceOriginal(responseUrl), slack.MsgOptionText(slackMsg, false))
+	clientSlack := slack.New(serviceConfig.SlackBotToken)
+	clientSlack.PostMessage("", slack.MsgOptionReplaceOriginal(request.ResponseUrl), slack.MsgOptionText(slackMsg, false))
 
 	return nil
 }

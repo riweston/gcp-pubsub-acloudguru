@@ -1,56 +1,30 @@
 package lookup_slack_id
 
 import (
-	"cloud.google.com/go/pubsub"
 	"context"
 	"fmt"
 	"github.com/GoogleCloudPlatform/functions-framework-go/functions"
+	"github.com/alexflint/go-arg"
 	"github.com/cloudevents/sdk-go/v2/event"
+	"github.com/cloudreach/gcp-pubsub-acloudguru/src/pkg/util"
 	acg "github.com/riweston/acloudguru-client-go"
 	"github.com/slack-go/slack"
-	"log"
-	"os"
 )
 
-var apiKey string
-var consumerId string
-var slackBotToken string
+// Required environment variables
 
-// init functions fail fast if the environment variables are not set
+type args struct {
+	ProjectID     string `arg:"required,env:PROJECT_ID"`
+	TopicName     string `arg:"required,env:TOPIC_NAME"`
+	ApiKey        string `arg:"required,env:ACLOUDGURU_API_KEY"`
+	ConsumerId    string `arg:"required,env:ACLOUDGURU_CONSUMER_ID"`
+	SlackBotToken string `arg:"required,env:SLACK_BOT_TOKEN"`
+}
+
+var serviceConfig args
 
 func init() {
-	apiKey = os.Getenv("ACLOUDGURU_API_KEY")
-	if apiKey == "" {
-		fmt.Println("ACLOUDGURU_API_KEY not set")
-		os.Exit(1)
-	}
-	consumerId = os.Getenv("ACLOUDGURU_CONSUMER_ID")
-	if consumerId == "" {
-		fmt.Println("ACLOUDGURU_CONSUMER_ID not set")
-		os.Exit(1)
-	}
-	slackBotToken = os.Getenv("SLACK_BOT_TOKEN")
-	if slackBotToken == "" {
-		fmt.Println("SLACK_BOT_TOKEN not set")
-		os.Exit(1)
-	}
-}
-
-// Message structs
-
-type PubSubMsg struct {
-	userId      string
-	responseUrl string
-	requestType string
-}
-
-type MessagePublishedData struct {
-	Message PubSubMessage
-}
-
-type PubSubMessage struct {
-	Data       []byte            `json:"data"`
-	Attributes map[string]string `json:"attributes"`
+	arg.MustParse(&serviceConfig)
 }
 
 func init() {
@@ -58,65 +32,36 @@ func init() {
 }
 
 func entryPoint(ctx context.Context, e event.Event) error {
-	var msg MessagePublishedData
+	var msg util.MessagePublishedData
 	if err := e.DataAs(&msg); err != nil {
 		return fmt.Errorf("event.DataAs: %v", err)
 	}
 
 	// Get the user's email address from Slack
-	fmt.Println("Looking up email address for user", msg.Message.Attributes["user_id"])
-	slackId, err := lookupEmail(msg.Message.Attributes["user_id"])
+	clientSlack := slack.New(serviceConfig.SlackBotToken)
+	slackId, err := clientSlack.GetUserInfo(msg.Message.Attributes["user_id"])
 	if err != nil {
-		return fmt.Errorf("(Slack Client) Error looking up email: %s", err)
+		return fmt.Errorf("(Slack Client) Error getting user: %s", err)
 	}
-	if slackId == "" {
-		return fmt.Errorf("(Slack Client) userId is blank")
-	}
-	fmt.Println("Email address for user", msg.Message.Attributes["user_id"], "is", slackId)
 
 	// Request the user's ACG ID from ACG using email address
-	clientAcg, err := acg.NewClient(&apiKey, &consumerId)
+	clientAcg, err := acg.NewClient(&serviceConfig.ApiKey, &serviceConfig.ConsumerId)
 	if err != nil {
 		return fmt.Errorf("(ACG Client) Error creating client: %s", err)
 	}
-	acgId, err := clientAcg.GetUserFromEmail(slackId)
+	acgId, err := clientAcg.GetUserFromEmail(slackId.Profile.Email)
 	if err != nil {
 		return fmt.Errorf("(ACG Client) Error getting user: %s", err)
 	}
-	println("ACG ID for user", slackId, "is", acgId)
-	pubSubMsg := PubSubMsg{
-		userId:      (*acgId)[0].UserId,
-		responseUrl: msg.Message.Attributes["response_url"],
-		requestType: "activate",
+
+	// Publish the message to PubSub
+	clientPubSub, err := util.NewClientPubSub(ctx, serviceConfig.ProjectID, serviceConfig.TopicName)
+	if err != nil {
+		fmt.Errorf("error creating client: %v", err)
 	}
-	pubSubMsg.PublishMessage()
+	defer clientPubSub.Close()
+	pubSubMsg := util.NewActivate((*acgId)[0], msg)
+	clientPubSub.PublishMessage(ctx, pubSubMsg.NewMessage())
 
 	return nil
-}
-
-func lookupEmail(userId string) (string, error) {
-	client := slack.New(slackBotToken)
-	user, err := client.GetUserInfo(userId)
-	if err != nil {
-		log.Printf("Error getting user info: %s", err)
-		return "", err
-	}
-	return user.Profile.Email, nil
-}
-
-func (p *PubSubMsg) PublishMessage() {
-	ctx := context.Background()
-	client, err := pubsub.NewClient(ctx, os.Getenv("PROJECT_ID"))
-	if err != nil {
-		log.Fatal(err)
-	}
-	topic := client.Topic(os.Getenv("TOPIC_NAME"))
-	defer topic.Stop()
-	topic.Publish(ctx, &pubsub.Message{
-		Attributes: map[string]string{
-			"user_id":      p.userId,
-			"response_url": p.responseUrl,
-			"request_type": p.requestType,
-		},
-	})
 }

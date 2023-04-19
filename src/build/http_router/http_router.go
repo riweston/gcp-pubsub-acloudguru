@@ -1,16 +1,29 @@
 package http_router
 
 import (
+	"context"
 	"encoding/json"
-	"github.com/riweston/gcp-pubsub-acloudguru/src/pkg/pub"
+	"github.com/alexflint/go-arg"
+	"github.com/cloudreach/gcp-pubsub-acloudguru/src/pkg/util"
 	"github.com/slack-go/slack"
 	"io"
 	"net/http"
-	"os"
 )
 
+type args struct {
+	ProjectID          string `arg:"required,env:PROJECT_ID"`
+	TopicName          string `arg:"required,env:TOPIC_NAME"`
+	SlackSigningSecret string `arg:"required,env:SLACK_SIGNING_SECRET"`
+}
+
+var serviceConfig args
+
+func init() {
+	arg.MustParse(&serviceConfig)
+}
+
 func EntryPoint(w http.ResponseWriter, r *http.Request) {
-	verifier, err := slack.NewSecretsVerifier(r.Header, os.Getenv("SLACK_SIGNING_SECRET"))
+	verifier, err := slack.NewSecretsVerifier(r.Header, serviceConfig.SlackSigningSecret)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
@@ -40,6 +53,14 @@ func EntryPoint(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	d := pub.SlashCommand(s)
-	d.PublishMessage()
+	ctx := context.Background()
+	clientPubSub, err := util.NewClientPubSub(ctx, serviceConfig.ProjectID, serviceConfig.TopicName)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	defer clientPubSub.Close()
+
+	request := util.NewRequest(s)
+	clientPubSub.PublishMessage(ctx, request.NewMessage())
 }
