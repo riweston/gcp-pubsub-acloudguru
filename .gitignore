@@ -195,3 +195,6 @@ terragrunt-debug.tfvars.json
 **/*_generated.tf
 
 # End of https://www.toptal.com/developers/gitignore/api/goland+all,go,visualstudiocode,terraform
+!/.env
+
+.env

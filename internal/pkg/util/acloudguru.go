@@ -24,7 +24,7 @@ func NewUsers(allUsers *[]acg.User, licenseCap int, daysCap int) *Users {
 	return users
 }
 
-func (r *Users) RemoveUsersFromSlice(users *[]acg.User, usersToRemove *[]acg.User) []acg.User {
+func (r *Users) removeUsersFromSlice(users *[]acg.User, usersToRemove *[]acg.User) []acg.User {
 	for _, user := range *usersToRemove {
 		for i, user2 := range *users {
 			if user.UserId == user2.UserId {
@@ -41,7 +41,7 @@ func (r *Users) GetUsersToDeactivate() (result []acg.User) {
 	// If there are users older than the days cap add them to be processed and remove them from our working slice
 	if len(r.OldUsers) > 0 {
 		result = append(result, r.OldUsers...)
-		ActiveUsers = r.RemoveUsersFromSlice(&r.ActiveUsers, &r.OldUsers)
+		ActiveUsers = r.removeUsersFromSlice(&r.ActiveUsers, &r.OldUsers)
 	}
 	// If there are still more users than the license cap add the remaining oldest users to be processed
 	CheckCap := len(ActiveUsers) - len(result)

@@ -1,4 +1,4 @@
-module github.com/riweston/gcp-pubsub-acloudguru/src/build/activate_deactivate
+module github.com/riweston/gcp-pubsub-acloudguru/functions/activate_deactivate
 
 go 1.19
 
