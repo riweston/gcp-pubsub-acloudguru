@@ -1,10 +1,11 @@
-module github.com/riweston/gcp-pubsub-acloudguru/src/build/http_router
+module github.com/riweston/gcp-pubsub-acloudguru/functions/http_router
 
 go 1.19
 
 require (
 	github.com/alexflint/go-arg v1.4.3
 	github.com/cloudreach/gcp-pubsub-acloudguru/src/pkg/util v0.0.0-20230124195308-19b331129a8e
+	github.com/joho/godotenv v1.5.1
 	github.com/slack-go/slack v0.12.1
 )
 

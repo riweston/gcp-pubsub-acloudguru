@@ -1,4 +1,4 @@
-module github.com/cloudreach/gcp-pubsub-acloudguru/src/build/house_keeping
+module github.com/cloudreach/gcp-pubsub-acloudguru/functions/house_keeping
 
 go 1.19
 

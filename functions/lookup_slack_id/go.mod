@@ -1,4 +1,4 @@
-module github.com/riweston/gcp-pubsub-acloudguru/src/build/lookup_slack_id
+module github.com/riweston/gcp-pubsub-acloudguru/functions/lookup_slack_id
 
 go 1.19
 

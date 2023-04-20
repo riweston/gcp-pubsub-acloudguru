@@ -1,4 +1,4 @@
-package internal
+package util
 
 import (
 	acg "github.com/riweston/acloudguru-client-go"
