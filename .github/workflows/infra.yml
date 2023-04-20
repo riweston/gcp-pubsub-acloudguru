@@ -10,7 +10,7 @@ on:
     paths:
       - "infra/application/**"
       - "!infra/application/README.md"
-      - "src/**"
+      - "functions/**"
 jobs:
   deploy:
     permissions:

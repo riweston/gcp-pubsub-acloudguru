@@ -1,4 +1,4 @@
-package util
+package internal
 
 type MessagePublishedData struct {
 	Message PubSubMessage

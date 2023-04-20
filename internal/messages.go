@@ -1,4 +1,4 @@
-package util
+package internal
 
 import (
 	"cloud.google.com/go/pubsub"
