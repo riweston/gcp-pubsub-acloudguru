@@ -1,6 +1,6 @@
-module github.com/riweston/gcp-pubsub-acloudguru/functions/lookup_slack_id
+module github.com/cloudreach/gcp-pubsub-acloudguru/functions/lookup_slack_id
 
-go 1.19
+go 1.21
 
 require (
 	github.com/GoogleCloudPlatform/functions-framework-go v1.6.1
