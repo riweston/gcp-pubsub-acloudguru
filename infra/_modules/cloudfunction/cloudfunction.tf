@@ -1,5 +1,3 @@
-data "google_project" "this" {}
-
 data "archive_file" "this" {
   type        = "zip"
   source_dir  = var.source_dir
@@ -7,18 +5,18 @@ data "archive_file" "this" {
 }
 
 resource "google_storage_bucket_object" "this" {
-  name   = "${var.function_name}.zip"
+  name   = "${var.function_name}.${data.archive_file.this.output_md5}.zip"
   bucket = var.bucket_name
   source = data.archive_file.this.output_path
 }
 
 resource "google_cloudfunctions2_function" "this" {
   name        = replace(var.function_name, "_", "-")
-  location    = var.location
-  description = "http trigger function"
+  location    = var.function_location
+  description = var.function_description
 
   build_config {
-    runtime     = "go119"
+    runtime     = var.function_runtime
     entry_point = var.entry_point
     source {
       storage_source {
@@ -33,28 +31,17 @@ resource "google_cloudfunctions2_function" "this" {
     available_memory      = "256M"
     timeout_seconds       = 60
     service_account_email = google_service_account.this.email
-    environment_variables = merge(
-      var.environment_variables,
-      {
-        PROJECT_ID = data.google_project.this.project_id,
-      }
-    )
+    environment_variables = var.environment_variables
 
     dynamic "secret_environment_variables" {
       for_each = data.google_secret_manager_secret.secret_environment_variables
       content {
         key        = secret_environment_variables.value.secret_id
-        project_id = data.google_project.this.project_id
+        project_id = var.project_id
         secret     = secret_environment_variables.value.secret_id
         version    = "latest"
       }
     }
-  }
-
-  lifecycle {
-    replace_triggered_by = [
-      google_storage_bucket_object.this.md5hash
-    ]
   }
 }
 

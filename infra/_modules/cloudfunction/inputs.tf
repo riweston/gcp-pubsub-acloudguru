@@ -9,22 +9,27 @@ variable "entry_point" {
 }
 
 variable "function_name" {
-  default     = ""
   description = "The name of the function"
 }
 
-variable "bucket_name" {
+variable "function_description" {
   default     = ""
+  description = "The description of the function"
+}
+
+variable "function_runtime" {
+  description = "The runtime in which the function will be executed"
+}
+
+variable "bucket_name" {
   description = "The name of the bucket where the function's deployment package will be stored"
 }
 
-variable "location" {
-  default     = ""
+variable "function_location" {
   description = "The location in which the function should be created"
 }
 
 variable "project_id" {
-  default     = ""
   description = "The ID of the project in which the function will be created"
 }
 
